@@ -10,6 +10,12 @@ class MonoNoteTypography {
 
   static const _webFont = 'Noto Sans SC';
 
+  static bool get _isAppleDesktop =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
+
+  static bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
   static Future<void> loadWebFonts() async {
     if (!kIsWeb) return;
     const directory = 'assets/fonts/noto-sans-sc';
@@ -19,41 +25,80 @@ class MonoNoteTypography {
         .load();
   }
 
-  static const List<String> uiFallback = <String>[
+  static List<String> get uiFallback => <String>[
     if (kIsWeb) _webFont,
-    'Segoe UI Variable',
-    'Microsoft YaHei UI',
-    'PingFang SC',
-    'SF Pro Text',
-    'Noto Sans SC',
+    if (_isWindows) ...const [
+      'HarmonyOS Sans SC',
+      'MiSans',
+      'Source Han Sans SC',
+      'Noto Sans SC',
+      'Segoe UI Variable',
+      'Segoe UI',
+      'Microsoft YaHei UI',
+    ] else if (_isAppleDesktop) ...const [
+      'PingFang SC',
+      'SF Pro Text',
+      'Noto Sans SC',
+    ] else ...const [
+      'Noto Sans SC',
+      'Source Han Sans SC',
+      'Segoe UI',
+      'Microsoft YaHei UI',
+      'PingFang SC',
+    ],
     'sans-serif',
   ];
 
-  static const List<String> editorialSerifFallback = <String>[
-    'Noto Serif SC',
-    'Source Han Serif SC',
-    'Songti SC',
-    'Georgia',
-    'Microsoft YaHei UI',
+  static List<String> get editorialSerifFallback => <String>[
+    if (kIsWeb) _webFont,
+    if (_isWindows) ...const [
+      'LXGW WenKai',
+      'LXGW WenKai GB',
+      'Noto Serif SC',
+      'Source Han Serif SC',
+      'HarmonyOS Sans SC',
+      'MiSans',
+      'Source Han Sans SC',
+      'Noto Sans SC',
+      'Georgia',
+      'Microsoft YaHei UI',
+    ] else ...const [
+      'Songti SC',
+      'Noto Serif SC',
+      'Source Han Serif SC',
+      'Georgia',
+      'PingFang SC',
+    ],
     'serif',
   ];
 
-  static const List<String> monoFallback = <String>[
+  static List<String> get monoFallback => <String>[
     'JetBrains Mono',
+    'JetBrainsMono NF',
+    'Cascadia Mono',
     'Cascadia Code',
     'SF Mono',
     'Consolas',
+    ...uiFallback,
     'monospace',
-    if (kIsWeb) _webFont,
   ];
 
   static String get primaryUiFont {
     if (kIsWeb) return _webFont;
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
-      return 'PingFang SC';
-    }
-    return 'Microsoft YaHei UI';
+    if (_isAppleDesktop) return 'PingFang SC';
+    if (_isWindows) return 'HarmonyOS Sans SC';
+    return 'Noto Sans SC';
   }
+
+  static String get primaryTitleFont {
+    if (kIsWeb) return _webFont;
+    if (_isAppleDesktop) return 'Songti SC';
+    if (_isWindows) return 'LXGW WenKai';
+    return 'Noto Serif SC';
+  }
+
+  static String get primaryMonoFont =>
+      _isAppleDesktop ? 'SF Mono' : 'JetBrains Mono';
 
   static ThemeData buildTheme(MonoNoteThemeTokens tokens) {
     final base = ThemeData(
@@ -83,7 +128,8 @@ class MonoNoteTypography {
           borderRadius: BorderRadius.circular(6),
         ),
         textStyle: TextStyle(
-          fontSize: 11.5,
+          fontFamily: primaryUiFont,
+          fontSize: 12,
           color: tokens.surfacePaper,
           fontFamilyFallback: uiFallback,
         ),
@@ -92,39 +138,36 @@ class MonoNoteTypography {
   }
 
   static TextStyle docTitle(MonoNoteThemeTokens t) => TextStyle(
-    fontFamily: kIsWeb ? _webFont : 'Georgia',
+    fontFamily: primaryTitleFont,
     fontFamilyFallback: editorialSerifFallback,
     fontSize: 28,
     fontWeight: FontWeight.w700,
     height: 1.28,
-    letterSpacing: -0.4,
     color: t.inkPrimary,
   );
 
   static TextStyle heading2(MonoNoteThemeTokens t) => TextStyle(
     fontFamily: primaryUiFont,
     fontFamilyFallback: uiFallback,
-    fontSize: 16.5,
+    fontSize: 17,
     fontWeight: FontWeight.w600,
     height: 1.4,
-    letterSpacing: -0.15,
     color: t.inkPrimary,
   );
 
   static TextStyle body(MonoNoteThemeTokens t) => TextStyle(
     fontFamily: primaryUiFont,
     fontFamilyFallback: uiFallback,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: FontWeight.w400,
     height: 1.72,
-    letterSpacing: 0.1,
     color: t.inkSecondary,
   );
 
   static TextStyle cardTitle(MonoNoteThemeTokens t) => TextStyle(
     fontFamily: primaryUiFont,
     fontFamilyFallback: uiFallback,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     height: 1.35,
     color: t.inkPrimary,
@@ -133,7 +176,7 @@ class MonoNoteTypography {
   static TextStyle cardExcerpt(MonoNoteThemeTokens t) => TextStyle(
     fontFamily: primaryUiFont,
     fontFamilyFallback: uiFallback,
-    fontSize: 12.2,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
     height: 1.5,
     color: t.inkSecondary,
@@ -158,10 +201,10 @@ class MonoNoteTypography {
   );
 
   static TextStyle code(MonoNoteThemeTokens t) => TextStyle(
-    fontFamily: 'Consolas',
+    fontFamily: primaryMonoFont,
     fontFamilyFallback: monoFallback,
-    fontSize: 12.5,
-    height: 1.58,
+    fontSize: 13,
+    height: 1.55,
     color: t.inkSecondary,
   );
 }

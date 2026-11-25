@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../app/window_bootstrap.dart';
+import '../../../core/mononote_shortcuts.dart';
 import '../../../core/theme/mononote_tokens.dart';
 import '../../../core/theme/mononote_typography.dart';
 import '../../../core/widgets/frosted_glass_surface.dart';
@@ -33,9 +34,9 @@ class MonoTitlebar extends ConsumerWidget {
     final state = ref.watch(workspaceProvider);
     final controller = ref.read(workspaceProvider.notifier);
     final compact = onOpenDrawer != null;
-    final shortcutLabel = defaultTargetPlatform == TargetPlatform.macOS
-        ? '⌘K'
-        : 'Ctrl+K';
+    final platform = Theme.of(context).platform;
+    final shortcutLabel = MonoShortcut.palette.keys(platform);
+    final sidebarShortcut = MonoShortcut.sidebar.keys(platform);
 
     return SizedBox(
       height: 42,
@@ -54,7 +55,7 @@ class MonoTitlebar extends ConsumerWidget {
             ],
             _TitlebarIconButton(
               icon: LucideIcons.panelLeft,
-              tooltip: compact ? '打开工作空间' : '折叠/展开浮动侧栏 (Ctrl+\\)',
+              tooltip: compact ? '打开工作空间' : '折叠/展开浮动侧栏 ($sidebarShortcut)',
               isActive: !compact && state.isSidebarOpen,
               onTap: onOpenDrawer ?? controller.toggleSidebar,
             ),
@@ -583,7 +584,7 @@ class _SearchCapsuleState extends State<_SearchCapsule> {
                   Text(
                     '搜索或命令…',
                     style: MonoNoteTypography.micro(t).copyWith(
-                      fontSize: 11.8,
+                      fontSize: 12,
                       color: _hovered ? t.inkPrimary : t.inkSecondary,
                     ),
                   ),

@@ -208,7 +208,7 @@ class _NoteBlockItemState extends State<NoteBlockItem> {
       ),
       child: switch (block.type) {
         NoteBlockType.callout => _CalloutView(
-          child: editor(body.copyWith(fontSize: 13.8)),
+          child: editor(body.copyWith(fontSize: 14)),
         ),
         NoteBlockType.heading2 => _Heading2View(
           child: editor(
@@ -323,7 +323,7 @@ class _SubpageCardViewState extends State<SubpageCardView> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOut,
-          transform: Matrix4.translationValues(0, _hovered ? -1.5 : 0, 0),
+          transform: Matrix4.translationValues(0, _hovered ? -1 : 0, 0),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _hovered ? t.surfaceCardHover : t.surfaceCard,

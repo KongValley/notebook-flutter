@@ -1,14 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/window_bootstrap.dart';
+import '../../core/mononote_shortcuts.dart';
 import '../../core/widgets/frosted_glass_surface.dart';
+import '../../core/widgets/shortcuts_dialog.dart';
 import '../command_palette/widgets/command_palette_dialog.dart';
 import '../editor/widgets/paper_editor_canvas.dart';
 import '../inspector/widgets/outline_inspector_drawer.dart';
 import '../notes/data/markdown_files.dart';
+import '../notes/data/note_exports.dart';
 import '../notes/state/workspace_controller.dart';
 import '../sidebar/widgets/floating_sidebar.dart';
 import 'widgets/mono_titlebar.dart';
@@ -21,7 +23,8 @@ class MonoShellPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(workspaceProvider.notifier);
     final files = ref.read(markdownFilesProvider);
-    final isMac = defaultTargetPlatform == TargetPlatform.macOS;
+    final exports = ref.read(noteExportsProvider);
+    final platform = Theme.of(context).platform;
     final compact = kIsWeb && MediaQuery.sizeOf(context).width < 760;
 
     return desktopWindowFrame(
@@ -48,32 +51,32 @@ class MonoShellPage extends ConsumerWidget {
               }
             }
 
-            SingleActivator shortcut(
-              LogicalKeyboardKey key, {
-              bool shift = false,
-            }) => SingleActivator(
-              key,
-              control: !isMac,
-              meta: isMac,
-              shift: shift,
-            );
+            final commands = <MonoShortcut, VoidCallback>{
+              MonoShortcut.palette: () => showMonoCommandPalette(context),
+              MonoShortcut.sidebar: toggleSidebar,
+              MonoShortcut.newNote: () => controller.createPage(),
+              MonoShortcut.theme: controller.toggleTheme,
+              MonoShortcut.outline: controller.toggleInspector,
+              MonoShortcut.previousTab: () => controller.cycleTab(-1),
+              MonoShortcut.nextTab: () => controller.cycleTab(1),
+              MonoShortcut.help: () => showMonoShortcuts(context),
+              MonoShortcut.openMarkdown: () => files.open(context),
+              MonoShortcut.saveMarkdown: () => files.save(context),
+              MonoShortcut.saveMarkdownAs: () =>
+                  files.save(context, saveAs: true),
+              MonoShortcut.exportPng: () =>
+                  exports.export(context, NoteExportFormat.png),
+              MonoShortcut.exportPdf: () =>
+                  exports.export(context, NoteExportFormat.pdf),
+            };
 
             return CallbackShortcuts(
               bindings: {
-                shortcut(LogicalKeyboardKey.keyK): () =>
-                    showMonoCommandPalette(context),
-                shortcut(LogicalKeyboardKey.backslash): toggleSidebar,
-                shortcut(LogicalKeyboardKey.keyN): () =>
-                    controller.createPage(),
-                shortcut(LogicalKeyboardKey.keyL, shift: true):
-                    controller.toggleTheme,
-                shortcut(LogicalKeyboardKey.keyO): () => files.open(context),
-                shortcut(LogicalKeyboardKey.keyS): () => files.save(context),
-                if (!kIsWeb)
-                  shortcut(LogicalKeyboardKey.keyS, shift: true): () =>
-                      files.save(context, saveAs: true),
+                for (final command in commands.entries)
+                  if (command.key.available)
+                    command.key.activator(platform): command.value,
               },
-              child: Focus(
+              child: FocusScope(
                 autofocus: true,
                 child: AmbientBackdrop(
                   child: Column(

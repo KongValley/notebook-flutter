@@ -108,6 +108,13 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     state = state.copyWith(openTabs: tabs, activePageId: nextActive);
   }
 
+  void cycleTab(int step) {
+    final tabs = state.openTabs;
+    if (tabs.length < 2) return;
+    final current = tabs.indexOf(state.activePageId);
+    openPage(tabs[(current + step) % tabs.length]);
+  }
+
   void toggleSidebar() {
     state = state.copyWith(isSidebarOpen: !state.isSidebarOpen);
   }

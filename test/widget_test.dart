@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Tristate;
 
@@ -12,6 +13,7 @@ import 'package:mononote/core/widgets/mononote_logo_mark.dart';
 import 'package:mononote/features/editor/widgets/paper_editor_canvas.dart';
 import 'package:mononote/features/inspector/widgets/outline_inspector_drawer.dart';
 import 'package:mononote/features/notes/data/markdown_files.dart';
+import 'package:mononote/features/notes/data/note_exports.dart';
 import 'package:mononote/features/notes/models/note_text.dart';
 import 'package:mononote/features/notes/state/workspace_controller.dart';
 import 'package:mononote/features/shell/widgets/mono_titlebar.dart';
@@ -43,6 +45,18 @@ void main() {
 
   Finder inTitlebar(Finder matching) =>
       find.descendant(of: find.byType(MonoTitlebar), matching: matching);
+
+  Future<void> pressAltShift(
+    WidgetTester tester,
+    LogicalKeyboardKey key,
+  ) async {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(key);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.pumpAndSettle();
+  }
 
   testWidgets(
     'renders MonoNote shell, frosted sidebar, tabs, and paper canvas',
@@ -327,6 +341,85 @@ void main() {
       'v-card-2',
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('runs workspace and rich text shortcuts', (tester) async {
+    final container = await pumpMonoNote(tester);
+
+    await pressAltShift(tester, LogicalKeyboardKey.pageDown);
+    expect(container.read(workspaceProvider).activePageId, 'tokens');
+    await pressAltShift(tester, LogicalKeyboardKey.pageUp);
+    expect(container.read(workspaceProvider).activePageId, 'vision');
+
+    final field = find.descendant(
+      of: find.byKey(const ValueKey('block-edit-v-callout')),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(field, '格式快捷键');
+    tester.widget<TextField>(field).controller!.selection = const TextSelection(
+      baseOffset: 0,
+      extentOffset: 2,
+    );
+    await pressAltShift(tester, LogicalKeyboardKey.keyX);
+    await pressAltShift(tester, LogicalKeyboardKey.keyC);
+    final content = container
+        .read(workspaceProvider)
+        .activeDocument
+        .blocks
+        .first
+        .content;
+    expect(content.hasMark(0, 2, NoteMark.strike), isTrue);
+    expect(content.hasMark(0, 2, NoteMark.code), isTrue);
+
+    await pressAltShift(tester, LogicalKeyboardKey.pageDown);
+    expect(container.read(workspaceProvider).activePageId, 'tokens');
+    await pressAltShift(tester, LogicalKeyboardKey.pageUp);
+    expect(container.read(workspaceProvider).activePageId, 'vision');
+
+    await pressAltShift(tester, LogicalKeyboardKey.keyH);
+    expect(find.text('键盘快捷键'), findsOneWidget);
+    expect(find.text('Alt+Shift+P'), findsOneWidget);
+    await tester.tap(find.text('关闭'));
+    await tester.pumpAndSettle();
+    expect(find.text('键盘快捷键'), findsNothing);
+  });
+
+  testWidgets('saves full length PNG and paginated PDF to selected files', (
+    tester,
+  ) async {
+    final container = await pumpMonoNote(tester);
+    final context = tester.element(find.byType(PaperEditorCanvas));
+    final controller = container.read(workspaceProvider.notifier);
+    final longBlock = List.generate(72, (index) => '第 $index 行').join('\n');
+    controller.importMarkdown('完整笔记.md', '# 示例\n\n```text\n$longBlock\n```\n');
+    final folder = Directory.systemTemp.createTempSync('mononote-export-test-');
+    addTearDown(() => folder.deleteSync(recursive: true));
+    final png = File('${folder.path}/完整笔记.png');
+    final pdf = File('${folder.path}/完整笔记.pdf');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const channel = MethodChannel('plugins.flutter.io/file_selector');
+    messenger.setMockMethodCallHandler(
+      channel,
+      (call) async =>
+          call.arguments['suggestedName'].toString().endsWith('.png')
+          ? png.path
+          : pdf.path,
+    );
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    final exports = container.read(noteExportsProvider);
+    await tester.runAsync(() async {
+      await exports.export(context, NoteExportFormat.png);
+      await exports.export(context, NoteExportFormat.pdf);
+    });
+
+    final pngBytes = png.readAsBytesSync();
+    expect(pngBytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
+    expect(ByteData.sublistView(pngBytes).getUint32(20), greaterThan(2000));
+    final pdfText = latin1.decode(pdf.readAsBytesSync());
+    expect(pdfText, startsWith('%PDF-'));
+    expect(RegExp(r'/Type\s*/Page\b').allMatches(pdfText), hasLength(2));
   });
 
   testWidgets('opens Markdown, saves edits and protects external changes', (

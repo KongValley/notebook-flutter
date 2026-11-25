@@ -6,9 +6,11 @@ const markdownFileTypes = [
   XTypeGroup(label: 'Markdown', extensions: ['md', 'markdown']),
 ];
 
-String markdownFileName(String title) {
+String markdownFileName(String title) => noteFileName(title, 'md');
+
+String noteFileName(String title, String extension) {
   final name = title.replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_').trim();
-  return '${name.isEmpty ? '未命名笔记' : name}.md';
+  return '${name.isEmpty ? '未命名笔记' : name}.$extension';
 }
 
 String decodeMarkdownFile(List<int> bytes) {

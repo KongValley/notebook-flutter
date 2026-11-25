@@ -7,6 +7,7 @@ import '../../../core/theme/mononote_tokens.dart';
 import '../../../core/theme/mononote_typography.dart';
 import '../../../core/widgets/frosted_glass_surface.dart';
 import '../../notes/data/markdown_files.dart';
+import '../../notes/data/note_exports.dart';
 import '../../notes/models/note_models.dart';
 import '../../notes/models/note_text.dart';
 import '../../notes/state/workspace_controller.dart';
@@ -88,6 +89,7 @@ class _PaperEditorCanvasState extends ConsumerState<PaperEditorCanvas>
     final state = ref.watch(workspaceProvider);
     final controller = ref.read(workspaceProvider.notifier);
     final files = ref.read(markdownFilesProvider);
+    final exports = ref.read(noteExportsProvider);
     ref.listen(
       workspaceProvider.select((state) => state.activePageId),
       (_, pageId) => _switchTo(pageId),
@@ -120,13 +122,21 @@ class _PaperEditorCanvasState extends ConsumerState<PaperEditorCanvas>
                   onToggleSlashMenu: isActive
                       ? () => setState(() => _slashMenuOpen = !_slashMenuOpen)
                       : null,
-                  onMarkdownAction: isActive
+                  onFileAction: isActive
                       ? (action) => switch (action) {
-                          _MarkdownAction.open => files.open(context),
-                          _MarkdownAction.save => files.save(context),
-                          _MarkdownAction.saveAs => files.save(
+                          _FileAction.open => files.open(context),
+                          _FileAction.save => files.save(context),
+                          _FileAction.saveAs => files.save(
                             context,
                             saveAs: true,
+                          ),
+                          _FileAction.png => exports.export(
+                            context,
+                            NoteExportFormat.png,
+                          ),
+                          _FileAction.pdf => exports.export(
+                            context,
+                            NoteExportFormat.pdf,
                           ),
                         }
                       : null,
@@ -377,20 +387,20 @@ class _DocumentScrollBodyState extends State<_DocumentScrollBody> {
       );
 }
 
-enum _MarkdownAction { open, save, saveAs }
+enum _FileAction { open, save, saveAs, png, pdf }
 
 class _CanvasHeaderBar extends StatelessWidget {
   const _CanvasHeaderBar({
     required this.doc,
     required this.opacity,
     required this.onToggleSlashMenu,
-    required this.onMarkdownAction,
+    required this.onFileAction,
   });
 
   final NoteDocument doc;
   final Animation<double> opacity;
   final VoidCallback? onToggleSlashMenu;
-  final ValueChanged<_MarkdownAction>? onMarkdownAction;
+  final ValueChanged<_FileAction>? onFileAction;
 
   @override
   Widget build(BuildContext context) {
@@ -485,10 +495,10 @@ class _CanvasHeaderBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              PopupMenuButton<_MarkdownAction>(
-                tooltip: 'Markdown 文件',
-                enabled: onMarkdownAction != null,
-                onSelected: onMarkdownAction,
+              PopupMenuButton<_FileAction>(
+                tooltip: '文件与导出',
+                enabled: onFileAction != null,
+                onSelected: onFileAction,
                 padding: EdgeInsets.zero,
                 icon: Icon(
                   LucideIcons.fileText,
@@ -497,18 +507,24 @@ class _CanvasHeaderBar extends StatelessWidget {
                 ),
                 itemBuilder: (_) => const [
                   PopupMenuItem(
-                    value: _MarkdownAction.open,
+                    value: _FileAction.open,
                     child: Text(kIsWeb ? '导入 Markdown…' : '打开本地 Markdown…'),
                   ),
                   PopupMenuItem(
-                    value: _MarkdownAction.save,
+                    value: _FileAction.save,
                     child: Text(kIsWeb ? '下载 Markdown' : '保存 Markdown'),
                   ),
                   if (!kIsWeb)
                     PopupMenuItem(
-                      value: _MarkdownAction.saveAs,
+                      value: _FileAction.saveAs,
                       child: Text('另存为 Markdown…'),
                     ),
+                  PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: _FileAction.png,
+                    child: Text('导出 PNG 图片'),
+                  ),
+                  PopupMenuItem(value: _FileAction.pdf, child: Text('导出 PDF')),
                 ],
               ),
             ],
@@ -640,13 +656,13 @@ class _ComposerRow extends StatelessWidget {
               onChanged: onChanged,
               onSubmitted: onSubmitted,
               style: MonoNoteTypography.body(t)
-                  .copyWith(color: t.inkPrimary, fontSize: 13.5, height: 1.4),
+                  .copyWith(color: t.inkPrimary, fontSize: 14, height: 1.4),
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
                 hintText: '继续输入文字回车成段，或键入 / 插入块级元素…',
                 hintStyle: MonoNoteTypography.body(t)
-                    .copyWith(color: t.inkMuted, fontSize: 13.5, height: 1.4),
+                    .copyWith(color: t.inkMuted, fontSize: 14, height: 1.4),
               ),
             ),
           ),
@@ -734,7 +750,7 @@ class _FrostedSlashMenu extends StatelessWidget {
                           child: Text(
                             opt.$3,
                             style: MonoNoteTypography.navLabel(t)
-                                .copyWith(color: t.inkPrimary, fontSize: 12.5),
+                                .copyWith(color: t.inkPrimary, fontSize: 13),
                           ),
                         ),
                         Container(
@@ -828,7 +844,7 @@ class _ToolbarChip extends StatelessWidget {
           style: MonoNoteTypography.micro(t).copyWith(
             color: accent ? t.accentPrimary : t.inkPrimary,
             fontWeight: FontWeight.w600,
-            fontSize: 11.5,
+            fontSize: 12,
           ),
         ),
       ),

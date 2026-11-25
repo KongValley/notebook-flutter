@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/mononote_shortcuts.dart';
 import '../../../core/theme/mononote_tokens.dart';
 import '../../../core/theme/mononote_typography.dart';
 import '../../../core/widgets/frosted_glass_surface.dart';
+import '../../../core/widgets/shortcuts_dialog.dart';
+import '../../notes/data/markdown_files.dart';
+import '../../notes/data/note_exports.dart';
 import '../../notes/state/workspace_controller.dart';
 
 /// Opens MonoNote's frosted global command palette (`Ctrl/Cmd + K`).
@@ -12,12 +17,12 @@ Future<void> showMonoCommandPalette(BuildContext context) {
   return showDialog<void>(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.24),
-    builder: (_) => const Dialog(
+    builder: (_) => Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      insetPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 64),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
       alignment: Alignment.topCenter,
-      child: _CommandPaletteModal(),
+      child: _CommandPaletteModal(workspaceContext: context),
     ),
   );
 }
@@ -37,7 +42,9 @@ class _CommandItem {
 }
 
 class _CommandPaletteModal extends ConsumerStatefulWidget {
-  const _CommandPaletteModal();
+  const _CommandPaletteModal({required this.workspaceContext});
+
+  final BuildContext workspaceContext;
 
   @override
   ConsumerState<_CommandPaletteModal> createState() =>
@@ -59,8 +66,29 @@ class _CommandPaletteModalState extends ConsumerState<_CommandPaletteModal> {
     final t = context.monoTokens;
     final state = ref.watch(workspaceProvider);
     final controller = ref.read(workspaceProvider.notifier);
+    final files = ref.read(markdownFilesProvider);
+    final exports = ref.read(noteExportsProvider);
+    final platform = Theme.of(context).platform;
+    final workspaceContext = widget.workspaceContext;
+
+    _CommandItem command(
+      MonoShortcut shortcut,
+      IconData icon,
+      VoidCallback execute, {
+      String? label,
+    }) => _CommandItem(
+      icon: icon,
+      label: label ?? shortcut.label,
+      hint: shortcut.keys(platform),
+      onExecute: execute,
+    );
 
     final commands = <_CommandItem>[
+      command(
+        MonoShortcut.help,
+        LucideIcons.keyboard,
+        () => showMonoShortcuts(workspaceContext),
+      ),
       for (final doc in state.documents.values)
         _CommandItem(
           icon: doc.icon.iconData,
@@ -68,29 +96,55 @@ class _CommandPaletteModalState extends ConsumerState<_CommandPaletteModal> {
           hint: doc.badge,
           onExecute: () => controller.openPage(doc.id),
         ),
-      _CommandItem(
-        icon: LucideIcons.plus,
+      command(
+        MonoShortcut.newNote,
+        LucideIcons.plus,
+        () => controller.createPage(),
         label: '新建空白笔记页面',
-        hint: 'Ctrl+N',
-        onExecute: () => controller.createPage(),
       ),
-      _CommandItem(
-        icon: t.isDark ? LucideIcons.sun : LucideIcons.moon,
+      command(
+        MonoShortcut.openMarkdown,
+        LucideIcons.folderOpen,
+        () => files.open(workspaceContext),
+      ),
+      command(
+        MonoShortcut.saveMarkdown,
+        LucideIcons.save,
+        () => files.save(workspaceContext),
+      ),
+      if (!kIsWeb)
+        command(
+          MonoShortcut.saveMarkdownAs,
+          LucideIcons.fileDown,
+          () => files.save(workspaceContext, saveAs: true),
+        ),
+      command(
+        MonoShortcut.exportPng,
+        LucideIcons.image,
+        () => exports.export(workspaceContext, NoteExportFormat.png),
+      ),
+      command(
+        MonoShortcut.exportPdf,
+        LucideIcons.fileText,
+        () => exports.export(workspaceContext, NoteExportFormat.pdf),
+      ),
+      command(
+        MonoShortcut.theme,
+        t.isDark ? LucideIcons.sun : LucideIcons.moon,
+        controller.toggleTheme,
         label: t.isDark ? '切换到晨曦素笺（浅色纸感）' : '切换到松烟夜读（暗色墨韵）',
-        hint: 'Theme',
-        onExecute: controller.toggleTheme,
       ),
-      _CommandItem(
-        icon: LucideIcons.panelLeft,
+      command(
+        MonoShortcut.sidebar,
+        LucideIcons.panelLeft,
+        controller.toggleSidebar,
         label: state.isSidebarOpen ? '折叠左侧浮动磨砂栏' : '展开左侧浮动磨砂栏',
-        hint: 'Ctrl+\\',
-        onExecute: controller.toggleSidebar,
       ),
-      _CommandItem(
-        icon: LucideIcons.alignLeft,
+      command(
+        MonoShortcut.outline,
+        LucideIcons.alignLeft,
+        controller.toggleInspector,
         label: state.isInspectorOpen ? '隐藏右侧文档大纲' : '显示右侧文档大纲',
-        hint: 'Outline',
-        onExecute: controller.toggleInspector,
       ),
     ];
 
@@ -129,18 +183,14 @@ class _CommandPaletteModalState extends ConsumerState<_CommandPaletteModal> {
                       controller: _searchController,
                       autofocus: true,
                       onChanged: (value) => setState(() => _query = value),
-                      style: MonoNoteTypography.body(t).copyWith(
-                        color: t.inkPrimary,
-                        height: 1.3,
-                      ),
+                      style: MonoNoteTypography.body(t)
+                          .copyWith(color: t.inkPrimary, height: 1.3),
                       decoration: InputDecoration(
                         isDense: true,
                         border: InputBorder.none,
                         hintText: '搜索页面、切换主题或执行命令…',
-                        hintStyle: MonoNoteTypography.body(t).copyWith(
-                          color: t.inkMuted,
-                          height: 1.3,
-                        ),
+                        hintStyle: MonoNoteTypography.body(t)
+                            .copyWith(color: t.inkMuted, height: 1.3),
                       ),
                     ),
                   ),
@@ -232,9 +282,9 @@ class _CommandRowState extends State<_CommandRow> {
                   widget.item.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: MonoNoteTypography.navLabel(t).copyWith(
-                    color: _hovered ? t.accentPrimary : t.inkPrimary,
-                  ),
+                  style: MonoNoteTypography.navLabel(
+                    t,
+                  ).copyWith(color: _hovered ? t.accentPrimary : t.inkPrimary),
                 ),
               ),
               const SizedBox(width: 8),
@@ -247,7 +297,7 @@ class _CommandRowState extends State<_CommandRow> {
                 ),
                 child: Text(
                   widget.item.hint,
-                  style: MonoNoteTypography.micro(t).copyWith(fontSize: 10.5),
+                  style: MonoNoteTypography.micro(t).copyWith(fontSize: 11),
                 ),
               ),
             ],

@@ -303,8 +303,8 @@ class _SidebarPageTileState extends State<_SidebarPageTile> {
           padding: EdgeInsets.only(
             left: 8.0 + widget.indentLevel * 16.0,
             right: 8,
-            top: 5.5,
-            bottom: 5.5,
+            top: 6,
+            bottom: 6,
           ),
           decoration: BoxDecoration(
             color: bgColor,
@@ -336,7 +336,7 @@ class _SidebarPageTileState extends State<_SidebarPageTile> {
                   overflow: TextOverflow.ellipsis,
                   style: MonoNoteTypography.navLabel(t).copyWith(
                     color: fgColor,
-                    fontSize: widget.indentLevel > 0 ? 12.2 : 12.8,
+                    fontSize: widget.indentLevel > 0 ? 12 : 13,
                     fontWeight: widget.isActive
                         ? FontWeight.w600
                         : FontWeight.w500,
@@ -358,7 +358,7 @@ class _SidebarPageTileState extends State<_SidebarPageTile> {
                     style: MonoNoteTypography.micro(t).copyWith(
                       color: t.accentPrimary,
                       fontWeight: FontWeight.w600,
-                      fontSize: 10.5,
+                      fontSize: 11,
                     ),
                   ),
                 ),

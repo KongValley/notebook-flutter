@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/mononote_shortcuts.dart';
 import '../../../core/theme/mononote_tokens.dart';
 import '../../notes/models/note_text.dart';
+import '../../notes/presentation/note_mark_style.dart';
+
+const _markActions = [
+  (NoteMark.bold, LucideIcons.bold, MonoShortcut.bold),
+  (NoteMark.italic, LucideIcons.italic, MonoShortcut.italic),
+  (NoteMark.strike, LucideIcons.strikethrough, MonoShortcut.strike),
+  (NoteMark.code, LucideIcons.code, MonoShortcut.code),
+];
 
 class InlineBlockEditor extends StatefulWidget {
   const InlineBlockEditor({
@@ -78,21 +86,11 @@ class _InlineBlockEditorState extends State<InlineBlockEditor> {
       decoration: const InputDecoration.collapsed(hintText: '输入内容…'),
     );
     if (!widget.rich) return field;
-    final isMac = Theme.of(context).platform == TargetPlatform.macOS;
+    final platform = Theme.of(context).platform;
     return CallbackShortcuts(
       bindings: {
-        SingleActivator(
-          LogicalKeyboardKey.keyB,
-          control: !isMac,
-          meta: isMac,
-        ): () =>
-            _toggle(NoteMark.bold),
-        SingleActivator(
-          LogicalKeyboardKey.keyI,
-          control: !isMac,
-          meta: isMac,
-        ): () =>
-            _toggle(NoteMark.italic),
+        for (final (mark, _, shortcut) in _markActions)
+          shortcut.activator(platform): () => _toggle(mark),
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,7 +106,6 @@ class _InlineBlockEditorState extends State<InlineBlockEditor> {
                   child: _FormatButtons(
                     controller: _controller,
                     onToggle: _toggle,
-                    shortcut: isMac ? '⌘' : 'Ctrl+',
                   ),
                 ),
               ),
@@ -120,25 +117,15 @@ class _InlineBlockEditorState extends State<InlineBlockEditor> {
 }
 
 class _FormatButtons extends StatelessWidget {
-  const _FormatButtons({
-    required this.controller,
-    required this.onToggle,
-    required this.shortcut,
-  });
+  const _FormatButtons({required this.controller, required this.onToggle});
 
   final _BlockEditingController controller;
   final ValueChanged<NoteMark> onToggle;
-  final String shortcut;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.monoTokens;
-    final buttons = [
-      (NoteMark.bold, LucideIcons.bold, '加粗 (${shortcut}B)'),
-      (NoteMark.italic, LucideIcons.italic, '斜体 (${shortcut}I)'),
-      (NoteMark.strike, LucideIcons.strikethrough, '删除线'),
-      (NoteMark.code, LucideIcons.code, '行内代码'),
-    ];
+    final platform = Theme.of(context).platform;
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.all(2),
@@ -150,9 +137,9 @@ class _FormatButtons extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (final (mark, icon, label) in buttons)
+          for (final (mark, icon, shortcut) in _markActions)
             Tooltip(
-              message: label,
+              message: '${shortcut.label} (${shortcut.keys(platform)})',
               child: Semantics(
                 button: true,
                 selected: controller.isMarked(mark),
@@ -306,16 +293,7 @@ class _BlockEditingController extends TextEditingController {
     final tokens = context.monoTokens;
     var offset = 0;
     for (final run in content.runs) {
-      final marks = run.marks;
-      final runStyle = TextStyle(
-        fontWeight: marks & NoteMark.bold.mask != 0 ? FontWeight.w700 : null,
-        fontStyle: marks & NoteMark.italic.mask != 0 ? FontStyle.italic : null,
-        decoration: marks & NoteMark.strike.mask != 0
-            ? TextDecoration.lineThrough
-            : null,
-        fontFamily: marks & NoteMark.code.mask != 0 ? 'monospace' : null,
-        backgroundColor: marks & NoteMark.code.mask != 0 ? tokens.codeBg : null,
-      );
+      final runStyle = noteMarkStyle(run.marks, tokens);
       final next = offset + run.text.length;
       if (underlined && next > composing.start && offset < composing.end) {
         final start = (composing.start - offset).clamp(0, run.text.length);

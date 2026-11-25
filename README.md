@@ -12,7 +12,8 @@ MonoNote 是用 Flutter 构建的桌面块编辑器，采用暖色纸感画布�
 
 ## 编辑笔记
 
-- 在画布右上角打开「Markdown 文件」菜单，选择本地 `.md` 或 `.markdown` 文件。Windows 上也可以用 `Ctrl+O` 打开、`Ctrl+S` 保存、`Ctrl+Shift+S` 另存为，macOS 上使用 `⌘`。
+- 在画布右上角打开「文件与导出」菜单，选择本地 `.md` 或 `.markdown` 文件，或将当前笔记导出为 PNG 长图和 A4 PDF。导出会包含完整笔记正文，PDF 按页以图片呈现。
+- 从命令面板选择「查看快捷键」可查看当前平台的按键。Windows 上可用 `Alt+Shift+H` 打开快捷键列表、`Alt+Shift+G` 导出 PNG、`Alt+Shift+P` 导出 PDF。桌面版使用 `Ctrl+O` 打开 Markdown、`Ctrl+S` 保存、`Ctrl+Shift+S` 另存为，macOS 使用 `⌘` 代替 `Ctrl`。
 - 点击文字块即可编辑。选中文字后，用块下方工具栏设置粗体、斜体、删除线或行内代码。待办状态通过方框切换。
 - 拖动块左侧手柄，沿画布提示线调整顺序。保存 Markdown 时会写入当前块顺序。
 - 表格、链接、图片等内容以可编辑的 Markdown 源文块保留。文件使用 UTF-8，修改后需要主动保存。若原文件已在应用外修改，可另存为新文件。
