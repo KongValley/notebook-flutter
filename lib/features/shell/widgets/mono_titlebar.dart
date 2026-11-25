@@ -143,7 +143,7 @@ const _tabPadding = 9.0;
 const _tabIconSize = 13.0;
 const _tabIconGap = 6.0;
 const _tabCloseGap = 5.0;
-const _tabCloseSize = 15.0;
+const _tabCloseSize = 18.0;
 const _tabMaxWidth = 200.0;
 
 TextStyle _tabLabelStyle(MonoNoteThemeTokens tokens) =>
@@ -503,23 +503,11 @@ class _TitlebarTabState extends State<_TitlebarTab> {
                       SizedBox.square(
                         dimension: _tabCloseSize,
                         child: widget.canClose
-                            ? GestureDetector(
-                                onTap: widget.onClose,
-                                behavior: HitTestBehavior.opaque,
-                                child: Center(
-                                  child: AnimatedOpacity(
-                                    duration: widget.motionDuration,
-                                    curve: _tabMotionCurve,
-                                    opacity: widget.isActive || _hovered
-                                        ? 0.85
-                                        : 0.45,
-                                    child: Icon(
-                                      LucideIcons.x,
-                                      size: 11,
-                                      color: t.inkSecondary,
-                                    ),
-                                  ),
-                                ),
+                            ? _TabCloseButton(
+                                key: ValueKey('tab-close-${widget.doc.id}'),
+                                tabActiveOrHovered: widget.isActive || _hovered,
+                                motionDuration: widget.motionDuration,
+                                onClose: widget.onClose,
                               )
                             : null,
                       ),
@@ -527,6 +515,63 @@ class _TitlebarTabState extends State<_TitlebarTab> {
                   ),
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabCloseButton extends StatefulWidget {
+  const _TabCloseButton({
+    super.key,
+    required this.tabActiveOrHovered,
+    required this.motionDuration,
+    required this.onClose,
+  });
+
+  final bool tabActiveOrHovered;
+  final Duration motionDuration;
+  final VoidCallback onClose;
+
+  @override
+  State<_TabCloseButton> createState() => _TabCloseButtonState();
+}
+
+class _TabCloseButtonState extends State<_TabCloseButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.monoTokens;
+    final bg = _hovered ? t.accentSoft : t.accentSoft.withValues(alpha: 0);
+    final fg = _hovered
+        ? t.accentPrimary
+        : t.inkSecondary.withValues(
+            alpha: widget.tabActiveOrHovered ? 0.85 : 0.45,
+          );
+
+    return Tooltip(
+      message: '关闭标签',
+      child: Semantics(
+        button: true,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: widget.onClose,
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: widget.motionDuration,
+              curve: _tabMotionCurve,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              alignment: Alignment.center,
+              child: Icon(LucideIcons.x, size: 12, color: fg),
             ),
           ),
         ),

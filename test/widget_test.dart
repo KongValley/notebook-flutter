@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mononote/app/app.dart';
+import 'package:mononote/core/theme/mononote_tokens.dart';
 import 'package:mononote/core/widgets/mononote_logo_mark.dart';
 import 'package:mononote/features/editor/widgets/paper_editor_canvas.dart';
 import 'package:mononote/features/inspector/widgets/outline_inspector_drawer.dart';
@@ -128,6 +129,45 @@ void main() {
       );
     },
   );
+
+  testWidgets('highlights tab close button on hover and closes tab on tap', (
+    tester,
+  ) async {
+    final container = await pumpMonoNote(tester);
+    final closeButton = inTitlebar(find.byKey(const ValueKey('tab-close-vision')));
+    expect(closeButton, findsOneWidget);
+
+    BoxDecoration closeDecoration() =>
+        tester
+            .widget<AnimatedContainer>(
+              find.descendant(
+                of: closeButton,
+                matching: find.byType(AnimatedContainer),
+              ),
+            )
+            .decoration! as BoxDecoration;
+
+    expect(closeDecoration().color!.a, 0);
+
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await pointer.addPointer(location: Offset.zero);
+    addTearDown(pointer.removePointer);
+    await pointer.moveTo(tester.getCenter(closeButton));
+    await tester.pumpAndSettle();
+
+    expect(closeDecoration().color, MonoNoteThemeTokens.light.accentSoft);
+    expect(
+      tester.widget<Icon>(
+        find.descendant(of: closeButton, matching: find.byType(Icon)),
+      ).color,
+      MonoNoteThemeTokens.light.accentPrimary,
+    );
+    expect(find.text('关闭标签'), findsOneWidget);
+
+    await tester.tap(closeButton);
+    await tester.pumpAndSettle();
+    expect(container.read(workspaceProvider).openTabs, isNot(contains('vision')));
+  });
 
   testWidgets('retargets an overflowing tab strip when selection changes', (
     tester,
