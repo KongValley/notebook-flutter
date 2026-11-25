@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,24 +12,36 @@ import '../../notes/state/workspace_controller.dart';
 /// Collapsible floating frosted glass sidebar hosting quick links, hierarchical
 /// workspace tree, tags, and local-first storage status.
 class FloatingSidebar extends ConsumerWidget {
-  const FloatingSidebar({super.key});
+  const FloatingSidebar({super.key, this.inDrawer = false});
+
+  final bool inDrawer;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.monoTokens;
     final state = ref.watch(workspaceProvider);
     final controller = ref.read(workspaceProvider.notifier);
+    final isOpen = inDrawer || state.isSidebarOpen;
+
+    void closeMenu() {
+      if (inDrawer) Scaffold.of(context).closeDrawer();
+    }
+
+    void openPage(String pageId) {
+      controller.openPage(pageId);
+      closeMenu();
+    }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
       curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-      width: state.isSidebarOpen ? 224 : 0,
-      margin: EdgeInsets.only(right: state.isSidebarOpen ? 8 : 0),
+      width: isOpen ? 224 : 0,
+      margin: EdgeInsets.only(right: isOpen && !inDrawer ? 8 : 0),
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 180),
-        opacity: state.isSidebarOpen ? 1 : 0,
+        opacity: isOpen ? 1 : 0,
         child: IgnorePointer(
-          ignoring: !state.isSidebarOpen,
+          ignoring: !isOpen,
           child: OverflowBox(
             alignment: Alignment.topLeft,
             minWidth: 224,
@@ -61,7 +74,7 @@ class FloatingSidebar extends ConsumerWidget {
                             hasChildren: false,
                             isExpanded: false,
                             indentLevel: 0,
-                            onTap: () => controller.openPage(doc.id),
+                            onTap: () => openPage(doc.id),
                           ),
                         const SizedBox(height: 14),
                         _SectionHeader(
@@ -69,7 +82,10 @@ class FloatingSidebar extends ConsumerWidget {
                           trailing: Tooltip(
                             message: '新建笔记页面',
                             child: InkWell(
-                              onTap: () => controller.createPage(),
+                              onTap: () {
+                                controller.createPage();
+                                closeMenu();
+                              },
                               borderRadius: BorderRadius.circular(5),
                               child: Padding(
                                 padding: const EdgeInsets.all(2),
@@ -88,6 +104,7 @@ class FloatingSidebar extends ConsumerWidget {
                             doc: root,
                             state: state,
                             controller: controller,
+                            onOpenPage: openPage,
                             indentLevel: 0,
                           ),
                         const SizedBox(height: 14),
@@ -145,7 +162,16 @@ class FloatingSidebar extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Text('本地工作区', style: MonoNoteTypography.micro(t)),
+                            if (kIsWeb)
+                              Tooltip(
+                                message: '刷新前请下载 Markdown 保留修改',
+                                child: Text(
+                                  '网页版 · 临时工作区',
+                                  style: MonoNoteTypography.micro(t),
+                                ),
+                              )
+                            else
+                              Text('本地工作区', style: MonoNoteTypography.micro(t)),
                           ],
                         ),
                         Text('v0.1', style: MonoNoteTypography.micro(t)),
@@ -165,6 +191,7 @@ class FloatingSidebar extends ConsumerWidget {
     required NoteDocument doc,
     required WorkspaceState state,
     required WorkspaceController controller,
+    required ValueChanged<String> onOpenPage,
     required int indentLevel,
   }) {
     final hasChildren = doc.childrenIds.isNotEmpty;
@@ -176,7 +203,7 @@ class FloatingSidebar extends ConsumerWidget {
         hasChildren: hasChildren,
         isExpanded: isExpanded,
         indentLevel: indentLevel,
-        onTap: () => controller.openPage(doc.id),
+        onTap: () => onOpenPage(doc.id),
         onToggleExpand: hasChildren
             ? () => controller.toggleTreeExpand(doc.id)
             : null,
@@ -192,6 +219,7 @@ class FloatingSidebar extends ConsumerWidget {
               doc: child,
               state: state,
               controller: controller,
+              onOpenPage: onOpenPage,
               indentLevel: indentLevel + 1,
             ),
           );

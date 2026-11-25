@@ -2,6 +2,10 @@
 
 MonoNote 是用 Flutter 构建的桌面块编辑器，采用暖色纸感画布、浮动侧栏和多标签页，支持打开和保存本地 Markdown。
 
+## 网页体验
+
+直接打开 [MonoNote 网页版](https://kongvalley.github.io/notebook-flutter/)。可以编辑示例笔记、拖动块排序，也可以通过画布右上角的文件菜单导入和下载 Markdown。文件在浏览器内处理，刷新前请下载需要保留的修改。
+
 ## Windows 下载
 
 从 [GitHub Releases](https://github.com/KongValley/notebook-flutter/releases) 下载 Windows x64 ZIP。解压整个压缩包后，运行其中的 `mononote.exe`。

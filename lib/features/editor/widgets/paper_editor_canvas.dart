@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -269,11 +270,19 @@ class _DocumentScrollBodyState extends State<_DocumentScrollBody> {
   @override
   Widget build(BuildContext context) {
     final doc = widget.doc;
+    final horizontalPadding = kIsWeb && MediaQuery.sizeOf(context).width < 600
+        ? 16.0
+        : 32.0;
 
     return ListView(
       key: PageStorageKey<String>('document-${doc.id}'),
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 48),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        24,
+        horizontalPadding,
+        48,
+      ),
       children: [
         Center(
           child: ConstrainedBox(
@@ -386,9 +395,10 @@ class _CanvasHeaderBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.monoTokens;
+    final compact = kIsWeb && MediaQuery.sizeOf(context).width < 600;
     return Container(
       height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: t.borderSubtle)),
       ),
@@ -397,11 +407,13 @@ class _CanvasHeaderBar extends StatelessWidget {
           Expanded(
             child: Row(
               children: [
-                Text('工作空间', style: MonoNoteTypography.micro(t)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Text('/', style: MonoNoteTypography.micro(t)),
-                ),
+                if (!compact) ...[
+                  Text('工作空间', style: MonoNoteTypography.micro(t)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text('/', style: MonoNoteTypography.micro(t)),
+                  ),
+                ],
                 Flexible(
                   child: FadeTransition(
                     opacity: opacity,
@@ -423,11 +435,16 @@ class _CanvasHeaderBar extends StatelessWidget {
           const SizedBox(width: 10),
           Row(
             children: [
-              if (doc.markdownSource != null) ...[
+              if (doc.markdownSource != null &&
+                  (!kIsWeb || doc.hasMarkdownChanges)) ...[
                 Tooltip(
                   message: doc.markdownSource!.path,
                   child: Text(
-                    doc.hasMarkdownChanges ? '未保存' : '已保存',
+                    kIsWeb
+                        ? '待导出'
+                        : doc.hasMarkdownChanges
+                        ? '未保存'
+                        : '已保存',
                     style: MonoNoteTypography.micro(t).copyWith(
                       color: doc.hasMarkdownChanges ? t.accentPrimary : t.sage,
                     ),
@@ -435,14 +452,16 @@ class _CanvasHeaderBar extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
               ],
-              FadeTransition(
-                opacity: opacity,
-                child: Text(
-                  '${doc.wordCount} 字',
-                  style: MonoNoteTypography.micro(t),
+              if (!compact) ...[
+                FadeTransition(
+                  opacity: opacity,
+                  child: Text(
+                    '${doc.wordCount} 字',
+                    style: MonoNoteTypography.micro(t),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
+              ],
               InkWell(
                 onTap: onToggleSlashMenu,
                 borderRadius: BorderRadius.circular(6),
@@ -457,7 +476,7 @@ class _CanvasHeaderBar extends StatelessWidget {
                     border: Border.all(color: t.borderSubtle),
                   ),
                   child: Text(
-                    '+ 插入块 (/)',
+                    compact ? '+ 插入块' : '+ 插入块 (/)',
                     style: MonoNoteTypography.micro(t).copyWith(
                       color: t.inkSecondary,
                       fontWeight: FontWeight.w500,
@@ -479,16 +498,17 @@ class _CanvasHeaderBar extends StatelessWidget {
                 itemBuilder: (_) => const [
                   PopupMenuItem(
                     value: _MarkdownAction.open,
-                    child: Text('打开本地 Markdown…'),
+                    child: Text(kIsWeb ? '导入 Markdown…' : '打开本地 Markdown…'),
                   ),
                   PopupMenuItem(
                     value: _MarkdownAction.save,
-                    child: Text('保存 Markdown'),
+                    child: Text(kIsWeb ? '下载 Markdown' : '保存 Markdown'),
                   ),
-                  PopupMenuItem(
-                    value: _MarkdownAction.saveAs,
-                    child: Text('另存为 Markdown…'),
-                  ),
+                  if (!kIsWeb)
+                    PopupMenuItem(
+                      value: _MarkdownAction.saveAs,
+                      child: Text('另存为 Markdown…'),
+                    ),
                 ],
               ),
             ],

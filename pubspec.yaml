@@ -66,6 +66,12 @@ flutter:
   assets:
     - assets/logo/mononote_logo.png
     - assets/logo/mononote_logo_showcase.png
+    - path: assets/fonts/noto-sans-sc/NotoSansSC-Regular.otf
+      platforms: [web]
+    - path: assets/fonts/noto-sans-sc/NotoSansSC-Bold.otf
+      platforms: [web]
+    - path: assets/fonts/noto-sans-sc/OFL.txt
+      platforms: [web]
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

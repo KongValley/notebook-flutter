@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="在线体验 MonoNote 的纸感块编辑器、拖拽排序与本地 Markdown 导入导出。">
+  <meta name="theme-color" content="#f7f2e9">
+  <link rel="icon" type="image/png" href="assets/assets/logo/mononote_logo.png">
+  <title>MonoNote · 网页体验</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f7f2e9;
+      color: #473b31;
+      font: 16px system-ui, sans-serif;
+    }
+
+    #loading, noscript {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" role="status">正在加载 MonoNote…</div>
+  <noscript>
+    <style>#loading { display: none; }</style>
+    启用 JavaScript 后即可体验 MonoNote。
+  </noscript>
+  <script>
+    window.addEventListener('flutter-first-frame', () => {
+      document.getElementById('loading').remove();
+    }, { once: true });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

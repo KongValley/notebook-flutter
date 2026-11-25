@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../../app/window_bootstrap.dart';
 import '../../../core/theme/mononote_tokens.dart';
@@ -17,17 +16,10 @@ import '../../notes/state/workspace_controller.dart';
 
 /// Unified 42px frosted glass titlebar with animated sliding document tabs,
 /// centered search capsule, and platform-adaptive window controls.
-class MonoTitlebar extends ConsumerStatefulWidget {
-  const MonoTitlebar({super.key});
+class MonoTitlebar extends ConsumerWidget {
+  const MonoTitlebar({super.key, this.onOpenDrawer});
 
-  @override
-  ConsumerState<MonoTitlebar> createState() => _MonoTitlebarState();
-}
-
-class _MonoTitlebarState extends ConsumerState<MonoTitlebar> {
-  ListenerId? _windowListenerId;
-  bool _isMaximized = false;
-
+  final VoidCallback? onOpenDrawer;
   bool get _isMac => !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
 
   bool get _isDesktopNative =>
@@ -36,45 +28,14 @@ class _MonoTitlebarState extends ConsumerState<MonoTitlebar> {
           defaultTargetPlatform == TargetPlatform.linux);
 
   @override
-  void initState() {
-    super.initState();
-    final window = getCurrentDesktopWindow();
-    if (window != null) {
-      _isMaximized = window.isMaximized;
-      try {
-        _windowListenerId = WindowManager.instance.addListener((event) {
-          if (!mounted) return;
-          switch (event) {
-            case WindowMaximizedEvent():
-            case WindowRestoredEvent():
-            case WindowResizedEvent():
-              final next = getCurrentDesktopWindow()?.isMaximized ?? false;
-              if (next != _isMaximized) {
-                setState(() => _isMaximized = next);
-              }
-            default:
-              break;
-          }
-        });
-      } catch (_) {}
-    }
-  }
-
-  @override
-  void dispose() {
-    if (_windowListenerId != null) {
-      try {
-        WindowManager.instance.removeListener(_windowListenerId!);
-      } catch (_) {}
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = context.monoTokens;
     final state = ref.watch(workspaceProvider);
     final controller = ref.read(workspaceProvider.notifier);
+    final compact = onOpenDrawer != null;
+    final shortcutLabel = defaultTargetPlatform == TargetPlatform.macOS
+        ? '⌘K'
+        : 'Ctrl+K';
 
     return SizedBox(
       height: 42,
@@ -93,9 +54,9 @@ class _MonoTitlebarState extends ConsumerState<MonoTitlebar> {
             ],
             _TitlebarIconButton(
               icon: LucideIcons.panelLeft,
-              tooltip: '折叠/展开浮动侧栏 (Ctrl+\\)',
-              isActive: state.isSidebarOpen,
-              onTap: controller.toggleSidebar,
+              tooltip: compact ? '打开工作空间' : '折叠/展开浮动侧栏 (Ctrl+\\)',
+              isActive: !compact && state.isSidebarOpen,
+              onTap: onOpenDrawer ?? controller.toggleSidebar,
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -105,7 +66,7 @@ class _MonoTitlebarState extends ConsumerState<MonoTitlebar> {
                   alignment: AlignmentDirectional.centerStart,
                   children: [
                     Positioned.fill(
-                      child: DragToMoveArea(child: const SizedBox.expand()),
+                      child: desktopDragRegion(const SizedBox.expand()),
                     ),
                     _AnimatedTabsStrip(
                       openTabs: state.openTabs,
@@ -118,23 +79,32 @@ class _MonoTitlebarState extends ConsumerState<MonoTitlebar> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: _SearchCapsule(
-                shortcutLabel: _isMac ? '⌘K' : 'Ctrl+K',
+            if (compact)
+              _TitlebarIconButton(
+                icon: LucideIcons.search,
+                tooltip: '搜索或命令 ($shortcutLabel)',
+                isActive: false,
                 onTap: () => showMonoCommandPalette(context),
+              )
+            else ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _SearchCapsule(
+                  shortcutLabel: shortcutLabel,
+                  onTap: () => showMonoCommandPalette(context),
+                ),
               ),
-            ),
-            Expanded(
-              flex: 4,
-              child: DragToMoveArea(child: const SizedBox.expand()),
-            ),
-            _TitlebarIconButton(
-              icon: LucideIcons.sparkles,
-              tooltip: '显示/隐藏悬浮格式条',
-              isActive: state.isFloatingToolbarVisible,
-              onTap: controller.toggleFloatingToolbar,
-            ),
+              Expanded(
+                flex: 4,
+                child: desktopDragRegion(const SizedBox.expand()),
+              ),
+              _TitlebarIconButton(
+                icon: LucideIcons.sparkles,
+                tooltip: '显示/隐藏悬浮格式条',
+                isActive: state.isFloatingToolbarVisible,
+                onTap: controller.toggleFloatingToolbar,
+              ),
+            ],
             const SizedBox(width: 2),
             _TitlebarIconButton(
               icon: t.isDark ? LucideIcons.sun : LucideIcons.moon,
@@ -154,31 +124,7 @@ class _MonoTitlebarState extends ConsumerState<MonoTitlebar> {
               Container(width: 1, height: 18, color: t.borderSubtle),
               SizedBox(
                 height: 42,
-                child: Row(
-                  children: [
-                    WindowCaptionButton.minimize(
-                      brightness: t.brightness,
-                      onPressed: minimizeDesktopWindow,
-                    ),
-                    MaximizeButtonArea(
-                      child: _isMaximized
-                          ? WindowCaptionButton.unmaximize(
-                              brightness: t.brightness,
-                              onPressed: () =>
-                                  getCurrentDesktopWindow()?.unmaximize(),
-                            )
-                          : WindowCaptionButton.maximize(
-                              brightness: t.brightness,
-                              onPressed: () =>
-                                  getCurrentDesktopWindow()?.maximize(),
-                            ),
-                    ),
-                    WindowCaptionButton.close(
-                      brightness: t.brightness,
-                      onPressed: closeDesktopWindow,
-                    ),
-                  ],
-                ),
+                child: DesktopWindowButtons(brightness: t.brightness),
               ),
             ],
           ],
@@ -255,8 +201,11 @@ class _AnimatedTabsStripState extends State<_AnimatedTabsStrip>
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
     final eased = _tabMotionCurve.transform(_scrollAnimator.value);
-    final next = lerpDouble(_scrollStart, _scrollEnd, eased)!
-        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    final next = lerpDouble(
+      _scrollStart,
+      _scrollEnd,
+      eased,
+    )!.clamp(position.minScrollExtent, position.maxScrollExtent);
     position.jumpTo(next);
   }
 
@@ -477,13 +426,13 @@ class _TitlebarTabState extends State<_TitlebarTab> {
     final tabBg = widget.isActive
         ? t.surfacePaper
         : (_hovered
-            ? t.surfacePaper.withValues(alpha: 0.48)
-            : t.surfacePaper.withValues(alpha: 0));
+              ? t.surfacePaper.withValues(alpha: 0.48)
+              : t.surfacePaper.withValues(alpha: 0));
     final tabBorder = widget.isActive
         ? t.borderStrong.withValues(alpha: 0.55)
         : (_hovered
-            ? t.borderSubtle.withValues(alpha: 0.45)
-            : t.borderSubtle.withValues(alpha: 0));
+              ? t.borderSubtle.withValues(alpha: 0.45)
+              : t.borderSubtle.withValues(alpha: 0));
 
     return Semantics(
       selected: widget.isActive,

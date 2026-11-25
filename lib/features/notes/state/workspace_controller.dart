@@ -209,6 +209,13 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       openPage(existing.id);
       return;
     }
+    _addMarkdownDocument(filePath, source, '从本地打开');
+  }
+
+  void importMarkdown(String fileName, String source) =>
+      _addMarkdownDocument(fileName, source, '从浏览器导入');
+
+  void _addMarkdownDocument(String filePath, String source, String label) {
     final counter = state.nextIdCounter;
     final id = 'page-$counter';
     final blocks = MarkdownCodec().decode(source, id);
@@ -218,7 +225,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       badge: 'Markdown',
       icon: NoteIconKind.file,
       tags: const [],
-      updatedLabel: '从本地打开',
+      updatedLabel: label,
       blocks: blocks,
       markdownSource: MarkdownSource(
         path: filePath,

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'mononote_tokens.dart';
 
@@ -7,7 +8,19 @@ import 'mononote_tokens.dart';
 class MonoNoteTypography {
   const MonoNoteTypography._();
 
+  static const _webFont = 'Noto Sans SC';
+
+  static Future<void> loadWebFonts() async {
+    if (!kIsWeb) return;
+    const directory = 'assets/fonts/noto-sans-sc';
+    await (FontLoader(_webFont)
+          ..addFont(rootBundle.load('$directory/NotoSansSC-Regular.otf'))
+          ..addFont(rootBundle.load('$directory/NotoSansSC-Bold.otf')))
+        .load();
+  }
+
   static const List<String> uiFallback = <String>[
+    if (kIsWeb) _webFont,
     'Segoe UI Variable',
     'Microsoft YaHei UI',
     'PingFang SC',
@@ -31,10 +44,12 @@ class MonoNoteTypography {
     'SF Mono',
     'Consolas',
     'monospace',
+    if (kIsWeb) _webFont,
   ];
 
   static String get primaryUiFont {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
+    if (kIsWeb) return _webFont;
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
       return 'PingFang SC';
     }
     return 'Microsoft YaHei UI';
@@ -77,76 +92,76 @@ class MonoNoteTypography {
   }
 
   static TextStyle docTitle(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: 'Georgia',
-        fontFamilyFallback: editorialSerifFallback,
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        height: 1.28,
-        letterSpacing: -0.4,
-        color: t.inkPrimary,
-      );
+    fontFamily: kIsWeb ? _webFont : 'Georgia',
+    fontFamilyFallback: editorialSerifFallback,
+    fontSize: 28,
+    fontWeight: FontWeight.w700,
+    height: 1.28,
+    letterSpacing: -0.4,
+    color: t.inkPrimary,
+  );
 
   static TextStyle heading2(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: primaryUiFont,
-        fontFamilyFallback: uiFallback,
-        fontSize: 16.5,
-        fontWeight: FontWeight.w600,
-        height: 1.4,
-        letterSpacing: -0.15,
-        color: t.inkPrimary,
-      );
+    fontFamily: primaryUiFont,
+    fontFamilyFallback: uiFallback,
+    fontSize: 16.5,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    letterSpacing: -0.15,
+    color: t.inkPrimary,
+  );
 
   static TextStyle body(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: primaryUiFont,
-        fontFamilyFallback: uiFallback,
-        fontSize: 14.5,
-        fontWeight: FontWeight.w400,
-        height: 1.72,
-        letterSpacing: 0.1,
-        color: t.inkSecondary,
-      );
+    fontFamily: primaryUiFont,
+    fontFamilyFallback: uiFallback,
+    fontSize: 14.5,
+    fontWeight: FontWeight.w400,
+    height: 1.72,
+    letterSpacing: 0.1,
+    color: t.inkSecondary,
+  );
 
   static TextStyle cardTitle(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: primaryUiFont,
-        fontFamilyFallback: uiFallback,
-        fontSize: 13.5,
-        fontWeight: FontWeight.w600,
-        height: 1.35,
-        color: t.inkPrimary,
-      );
+    fontFamily: primaryUiFont,
+    fontFamilyFallback: uiFallback,
+    fontSize: 13.5,
+    fontWeight: FontWeight.w600,
+    height: 1.35,
+    color: t.inkPrimary,
+  );
 
   static TextStyle cardExcerpt(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: primaryUiFont,
-        fontFamilyFallback: uiFallback,
-        fontSize: 12.2,
-        fontWeight: FontWeight.w400,
-        height: 1.5,
-        color: t.inkSecondary,
-      );
+    fontFamily: primaryUiFont,
+    fontFamilyFallback: uiFallback,
+    fontSize: 12.2,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    color: t.inkSecondary,
+  );
 
   static TextStyle navLabel(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: primaryUiFont,
-        fontFamilyFallback: uiFallback,
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        height: 1.35,
-        color: t.inkSecondary,
-      );
+    fontFamily: primaryUiFont,
+    fontFamilyFallback: uiFallback,
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    height: 1.35,
+    color: t.inkSecondary,
+  );
 
   static TextStyle micro(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: primaryUiFont,
-        fontFamilyFallback: uiFallback,
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        height: 1.25,
-        color: t.inkMuted,
-      );
+    fontFamily: primaryUiFont,
+    fontFamilyFallback: uiFallback,
+    fontSize: 11,
+    fontWeight: FontWeight.w500,
+    height: 1.25,
+    color: t.inkMuted,
+  );
 
   static TextStyle code(MonoNoteThemeTokens t) => TextStyle(
-        fontFamily: 'Consolas',
-        fontFamilyFallback: monoFallback,
-        fontSize: 12.5,
-        height: 1.58,
-        color: t.inkSecondary,
-      );
+    fontFamily: 'Consolas',
+    fontFamilyFallback: monoFallback,
+    fontSize: 12.5,
+    height: 1.58,
+    color: t.inkSecondary,
+  );
 }
